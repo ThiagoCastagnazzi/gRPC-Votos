@@ -43,5 +43,5 @@ node client.js
 ## Autores
 
 - [Thiago Castagnazzi](https://github.com/ThiagoCastagnazzi)
-- [Lucas Monteiro]()
-- [Gustavo Cruz]()
+- [Lucas Monteiro](https://github.com/LucasMonteiroS)
+- [Gustavo Cruz](https://github.com/Gustavo-Cruz-Pinheiro)
