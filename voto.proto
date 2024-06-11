@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package voting;
+
+service VotingService {
+  rpc computarVoto (VoteRequest) returns (VoteResponse);
+}
+
+message VoteRequest {
+  string cpf = 1;
+  int32 candidateNumber = 2;
+}
+
+message VoteResponse {
+  bool success = 1;
+}
+
+message ResultsRequest {}
+
+message ResultsResponse {
+  map<string, int32> results = 1;
+}
