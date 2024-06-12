@@ -3,7 +3,8 @@ syntax = "proto3";
 package voting;
 
 service VotingService {
-  rpc computarVoto (VoteRequest) returns (VoteResponse);
+  rpc computarVoto(VoteRequest) returns (VoteResponse);
+  rpc apuracaoVotos(ApuracaoRequest) returns (ApuracaoResponse);
 }
 
 message VoteRequest {
@@ -15,8 +16,14 @@ message VoteResponse {
   bool success = 1;
 }
 
-message ResultsRequest {}
+message ApuracaoRequest {}
 
-message ResultsResponse {
-  map<string, int32> results = 1;
+message VoteResult {
+  string candidate = 1;
+  int32 count = 2;
+  float percentage = 3;
+}
+
+message ApuracaoResponse {
+  repeated VoteResult results = 1;
 }

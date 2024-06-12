@@ -1,52 +1,34 @@
-const sqlite3 = require("sqlite3").verbose();
+const grpc = require("@grpc/grpc-js");
+const protoLoader = require("@grpc/proto-loader");
 
-const db = new sqlite3.Database("voting.db");
+const PROTO_PATH = "./voto.proto";
+const packageDefinition = protoLoader.loadSync(PROTO_PATH);
+const votingProto = grpc.loadPackageDefinition(packageDefinition).voting;
 
-const displayResults = () => {
-  db.all(
-    `
-      SELECT candidates.name as candidate, COALESCE(COUNT(votes.candidateNumber), 0) as count
-      FROM candidates
-      LEFT JOIN votes ON candidates.number = votes.candidateNumber
-      GROUP BY candidates.name
-    `,
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error("Erro no banco de dados:", err.message);
-        return;
-      }
+const client = new votingProto.VotingService(
+  "localhost:50051",
+  grpc.credentials.createInsecure()
+);
 
-      const totalVotes = rows.reduce((acc, row) => acc + row.count, 0);
-      console.log("Resultados da Votação:");
-
-      rows.forEach((row) => {
-        const percentage = ((row.count / totalVotes) * 100).toFixed(2);
-        console.log(`${row.candidate}: ${row.count} votos (${percentage}%)`);
-      });
-
-      console.log("");
+const apuracaoVotos = (call, callback) => {
+  client.apuracaoVotos({}, (error, response) => {
+    if (!error) {
+      callback(null, response);
+    } else {
+      callback(error, null);
     }
-  );
+  });
 };
 
-const monitorVotes = () => {
-  let lastVoteCount = 0;
+const server = new grpc.Server();
+server.addService(votingProto.VotingService.service, { apuracaoVotos });
 
-  setInterval(() => {
-    db.get("SELECT COUNT(*) as count FROM votes", (err, row) => {
-      if (err) {
-        console.error("Erro no banco de dados:", err.message);
-        return;
-      }
-
-      const currentVoteCount = row.count;
-      if (currentVoteCount > lastVoteCount) {
-        lastVoteCount = currentVoteCount;
-        displayResults();
-      }
-    });
-  }, 2000);
-};
-
-monitorVotes();
+const PORT = "50052";
+server.bindAsync(
+  `127.0.0.1:${PORT}`,
+  grpc.ServerCredentials.createInsecure(),
+  () => {
+    console.log(`Apuracao Server running at http://127.0.0.1:${PORT}`);
+    server.start();
+  }
+);

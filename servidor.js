@@ -30,6 +30,7 @@ db.serialize(() => {
     { name: "Lula", number: 13 },
     { name: "Bolsonaro", number: 22 },
     { name: "Véio da Van", number: 51 },
+    { name: "Nulo", number: 0 }
   ];
 
   candidates.forEach((candidate) => {
@@ -41,13 +42,7 @@ db.serialize(() => {
 });
 
 const PROTO_PATH = "./voto.proto";
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-  keepCase: true,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true,
-});
+const packageDefinition = protoLoader.loadSync(PROTO_PATH);
 const votingProto = grpc.loadPackageDefinition(packageDefinition).voting;
 
 const computarVoto = (call, callback) => {
@@ -113,8 +108,36 @@ const computarVoto = (call, callback) => {
   });
 };
 
+const apuracaoVotos = (call, callback) => {
+  db.all(
+    `
+      SELECT candidates.name as candidate, COALESCE(COUNT(votes.candidateNumber), 0) as count
+      FROM candidates
+      LEFT JOIN votes ON candidates.number = votes.candidateNumber
+      GROUP BY candidates.name
+    `,
+    [],
+    (err, rows) => {
+      if (err) {
+        callback(
+          { code: grpc.status.INTERNAL, message: "Erro no banco de dados" },
+          null
+        );
+        return;
+      }
+
+      const results = rows.map(row => ({
+        candidate: row.candidate,
+        count: row.count
+      }));
+
+      callback(null, { results });
+    }
+  );
+}
+
 const server = new grpc.Server();
-server.addService(votingProto.VotingService.service, { computarVoto });
+server.addService(votingProto.VotingService.service, { computarVoto, apuracaoVotos });
 
 const PORT = "50051";
 server.bindAsync(
