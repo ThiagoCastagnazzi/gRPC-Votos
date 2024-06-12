@@ -1,5 +1,5 @@
-const grpc = require("@grpc/grpc-js");
-const protoLoader = require("@grpc/proto-loader");
+import { loadPackageDefinition, ServerCredentials, status } from "@grpc/grpc-js";
+import { loadSync } from "@grpc/proto-loader";
 const sqlite3 = require("sqlite3").verbose();
 
 const db = new sqlite3.Database("voting.db");
@@ -41,110 +41,75 @@ db.serialize(() => {
   });
 });
 
-const PROTO_PATH = "./voto.proto";
-const packageDefinition = protoLoader.loadSync(PROTO_PATH);
-const votingProto = grpc.loadPackageDefinition(packageDefinition).voting;
+const votingDef = loadSync("./voto.proto");
+const votingProto = loadPackageDefinition({ ...votingDef });
 
-const computarVoto = (call, callback) => {
-  const { cpf, candidateNumber } = call.request;
-
-  db.get("SELECT cpf FROM votes WHERE cpf = ?", [cpf], (err, row) => {
-    if (err) {
-      callback(
-        { code: grpc.status.INTERNAL, message: "Erro no banco de dados" },
-        null
-      );
-      return;
-    }
-    if (row) {
-      callback(
-        {
-          code: grpc.status.ALREADY_EXISTS,
-          message: "CPF já utilizado",
-        },
-        null
-      );
-      return;
-    }
-
-    db.get(
-      "SELECT number FROM candidates WHERE number = ?",
-      [candidateNumber],
-      (err, row) => {
-        if (err) {
-          callback(
-            { code: grpc.status.INTERNAL, message: "Erro no banco de dados" },
-            null
-          );
-          return;
-        }
-        if (!row) {
-          callback(
-            { code: grpc.status.NOT_FOUND, message: "Candidato não existente" },
-            null
-          );
-          return;
-        }
-
-        db.run(
-          "INSERT INTO votes(cpf, candidateNumber) VALUES(?, ?)",
-          [cpf, candidateNumber],
-          (err) => {
-            if (err) {
-              callback(
-                {
-                  code: grpc.status.INTERNAL,
-                  message: "Erro ao registrar voto",
-                },
-                null
-              );
-              return;
-            }
-            callback(null, { success: true });
-          }
-        );
-      }
-    );
-  });
-};
-
-const apuracaoVotos = (call, callback) => {
-  db.all(
-    `
-      SELECT candidates.name as candidate, COALESCE(COUNT(votes.candidateNumber), 0) as count
-      FROM candidates
-      LEFT JOIN votes ON candidates.number = votes.candidateNumber
-      GROUP BY candidates.name
-    `,
-    [],
-    (err, rows) => {
+const grpcServer = new Server();
+grpcServer.addService(votingProto.VotingService.service, { 
+  computarVoto: (call, callback) => {
+    const { cpf, candidateNumber } = call.request;
+  
+    db.get("SELECT cpf FROM votes WHERE cpf = ?", [cpf], (err, row) => {
       if (err) {
         callback(
-          { code: grpc.status.INTERNAL, message: "Erro no banco de dados" },
+          { code: status.INTERNAL, message: "Erro no banco de dados" },
           null
         );
         return;
       }
+      if (row) {
+        callback(
+          {
+            code: status.ALREADY_EXISTS,
+            message: "CPF já utilizado",
+          },
+          null
+        );
+        return;
+      }
+  
+      db.get(
+        "SELECT number FROM candidates WHERE number = ?",
+        [candidateNumber],
+        (err, row) => {
+          if (err) {
+            callback(
+              { code: status.INTERNAL, message: "Erro no banco de dados" },
+              null
+            );
+            return;
+          }
+          if (!row) {
+            callback(
+              { code: status.NOT_FOUND, message: "Candidato não existente" },
+              null
+            );
+            return;
+          }
+  
+          db.run(
+            "INSERT INTO votes(cpf, candidateNumber) VALUES(?, ?)",
+            [cpf, candidateNumber],
+            (err) => {
+              if (err) {
+                callback(
+                  {
+                    code: status.INTERNAL,
+                    message: "Erro ao registrar voto",
+                  },
+                  null
+                );
+                return;
+              }
+              callback(null, { success: true });
+            }
+          );
+        }
+      );
+    });
+}});
 
-      const results = rows.map(row => ({
-        candidate: row.candidate,
-        count: row.count
-      }));
-
-      callback(null, { results });
-    }
-  );
-}
-
-const server = new grpc.Server();
-server.addService(votingProto.VotingService.service, { computarVoto, apuracaoVotos });
-
-const PORT = "50051";
-server.bindAsync(
-  `127.0.0.1:${PORT}`,
-  grpc.ServerCredentials.createInsecure(),
-  () => {
-    console.log(`Server running at http://127.0.0.1:${PORT}`);
-    server.start();
-  }
-);
+const serverAddress = "0.0.0.0:50051";
+grpcServer.bindAsync(serverAddress, ServerCredentials.createInsecure(), () => {
+    console.log(`Servidor rodando em http://${serverAddress}`);
+});

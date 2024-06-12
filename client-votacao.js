@@ -1,15 +1,11 @@
 const readline = require('readline');
-const grpc = require("@grpc/grpc-js");
-const protoLoader = require("@grpc/proto-loader");
+import { credentials, loadPackageDefinition } from "@grpc/grpc-js";
+import { loadSync } from "@grpc/proto-loader";
 
-const PROTO_PATH = "./voto.proto";
-const packageDefinition = protoLoader.loadSync(PROTO_PATH);
-const votingProto = grpc.loadPackageDefinition(packageDefinition).voting;
+const votingDef = loadSync("./voto.proto");
+const votingProto = loadPackageDefinition({ ...votingDef });
 
-const client = new votingProto.VotingService(
-  "localhost:50051",
-  grpc.credentials.createInsecure()
-);
+const client = new votingProto.VotingService("127.0.0.1:50051", credentials.createInsecure());
 
 const leitor = readline.createInterface({
   input: process.stdin,

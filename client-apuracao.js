@@ -1,20 +1,10 @@
-const grpc = require("@grpc/grpc-js");
-const protoLoader = require("@grpc/proto-loader");
+import { credentials, loadPackageDefinition } from "@grpc/grpc-js";
+import { loadSync } from "@grpc/proto-loader";
 
-const PROTO_PATH = "./voto.proto";
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-  keepCase: true,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true,
-});
-const votingProto = grpc.loadPackageDefinition(packageDefinition).voting;
+const votingDef = loadSync("./voto.proto");
+const votingProto = loadPackageDefinition({ ...votingDef });
 
-const client = new votingProto.VotingService(
-  "localhost:50052", // Conectar ao servidor de apuração
-  grpc.credentials.createInsecure()
-);
+const client = new votingProto.VotingService("127.0.0.1:50052", credentials.createInsecure());
 
 const apurar = async () => {
   return new Promise((resolve, reject) => {
@@ -32,7 +22,7 @@ const main = async () => {
   try {
     const resultado = await apurar();
     console.log("Resultados da Apuração:");
-    console.log(resultado);
+    //console.log(resultado);
     const totalVotes = resultado.results.reduce((acc, row) => acc + row.count, 0);
 
     if (resultado.results) {
