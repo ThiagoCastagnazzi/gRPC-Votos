@@ -1,4 +1,4 @@
-import { credentials, loadPackageDefinition, ServerCredentials } from "@grpc/grpc-js";
+import { credentials, loadPackageDefinition, ServerCredentials, Server } from "@grpc/grpc-js";
 import { loadSync } from "@grpc/proto-loader";
 
 const votingDef = loadSync("./voto.proto");
@@ -19,7 +19,7 @@ grpcServer.addService(votingProto.VotingService.service, {
   }
 });
 
-const serverAddress = "0.0.0.0:50052";
+const serverAddress = "127.0.0.1:50052";
 grpcServer.bindAsync(serverAddress, ServerCredentials.createInsecure(), () => {
     console.log(`Servidor rodando em http://${serverAddress}`);
 });

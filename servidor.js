@@ -48,7 +48,6 @@ const grpcServer = new Server();
 grpcServer.addService(votingProto.VotingService.service, { 
   computarVoto: (call, callback) => {
     const { cpf, candidateNumber } = call.request;
-  
     db.get("SELECT cpf FROM votes WHERE cpf = ?", [cpf], (err, row) => {
       if (err) {
         callback(
@@ -137,7 +136,7 @@ grpcServer.addService(votingProto.VotingService.service, {
   }
 });
 
-const serverAddress = "0.0.0.0:50051";
+const serverAddress = "127.0.0.1:50051";
 grpcServer.bindAsync(serverAddress, ServerCredentials.createInsecure(), () => {
     console.log(`Servidor rodando em http://${serverAddress}`);
 });

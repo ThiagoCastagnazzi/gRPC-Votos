@@ -1,8 +1,8 @@
 syntax = "proto3";
 
 service VotingService {
-  rpc computarVoto(VoteRequest) returns (VoteResponse);
-  rpc apuracaoVotos(ApuracaoRequest) returns (ApuracaoResponse);
+  rpc ComputarVoto(VoteRequest) returns (VoteResponse);
+  rpc ApuracaoVotos(ApuracaoRequest) returns (ApuracaoResponse);
 }
 
 message VoteRequest {
