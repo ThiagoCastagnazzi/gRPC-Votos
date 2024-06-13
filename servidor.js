@@ -1,6 +1,6 @@
-import { loadPackageDefinition, ServerCredentials, status } from "@grpc/grpc-js";
+import { loadPackageDefinition, ServerCredentials, status, Server } from "@grpc/grpc-js";
 import { loadSync } from "@grpc/proto-loader";
-const sqlite3 = require("sqlite3").verbose();
+import sqlite3 from 'sqlite3';
 
 const db = new sqlite3.Database("voting.db");
 
