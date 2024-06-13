@@ -22,7 +22,6 @@ const main = async () => {
   try {
     const resultado = await apurar();
     console.log("Resultados da Apuração:");
-    //console.log(resultado);
     const totalVotes = resultado.results.reduce((acc, row) => acc + row.count, 0);
 
     if (resultado.results) {

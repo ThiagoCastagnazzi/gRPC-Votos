@@ -107,7 +107,35 @@ grpcServer.addService(votingProto.VotingService.service, {
         }
       );
     });
-}});
+  }, 
+  apuracaoVotos: (call, callback) => {
+    db.all(
+      `
+        SELECT candidates.name as candidate, COALESCE(COUNT(votes.candidateNumber), 0) as count
+        FROM candidates
+        LEFT JOIN votes ON candidates.number = votes.candidateNumber
+        GROUP BY candidates.name
+      `,
+      [],
+      (err, rows) => {
+        if (err) {
+          callback(
+            { code: status.INTERNAL, message: "Erro no banco de dados" },
+            null
+          );
+          return;
+        }
+  
+        const results = rows.map(row => ({
+          candidate: row.candidate,
+          count: row.count
+        }));
+  
+        callback(null, { results });
+      }
+    );
+  }
+});
 
 const serverAddress = "0.0.0.0:50051";
 grpcServer.bindAsync(serverAddress, ServerCredentials.createInsecure(), () => {
